@@ -1,15 +1,15 @@
 import streamlit as st
-from openai import OpenAI
+import openai
 import pandas as pd
 from io import StringIO
-from dotenv import load_dotenv 
+from dotenv import load_dotenv
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain.vectorstores import FAISS
 from langchain_core.output_parsers import StrOutputParser
+from langchain.chat_models import ChatOpenAI
 import os
-from langchain_openai import ChatOpenAI
 import random
 from streamlit.components.v1 import html
 import time
@@ -61,7 +61,7 @@ with st.sidebar:
     info@techproeducation.com            
     +1 585 304 29 59       
     New York City, NY USA
-                    
+                  
     Programs:
     
     - FREE ONLINE IT COURSES                
@@ -72,123 +72,134 @@ with st.sidebar:
     - DIGITAL MARKETING
     """)
 
+st.write(
+    "Upload a document below and ask a question about it – GPT will answer! "
+    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
+)
+
+# Input: Get OpenAI API key before file upload
+api_key = st.text_input("Lütfen OpenAI API anahtarınızı girin:", type="password")
+if not api_key:
+    st.warning("Lütfen API anahtarınızı girin.")
+
+openai.api_key = api_key
+
 # Upload Excel file via Streamlit file uploader
-excel_file = st.file_uploader("Excel dosyanızı yükleyin", type=["xlsx"])
-if excel_file:
-    # Read Excel file into a DataFrame
-    data = pd.read_excel(excel_file)
-    
-    # Convert questions and answers to a list
-    questions = data['Questions'].tolist()  
-    answers = data['Answers'].tolist()      
-
-    # Create document objects
-    documents = [Document(page_content=f"{row['Questions']}\n{row['Answers']}") for _, row in data.iterrows()]
-
-    # Determine embedding model
-    model_name = "BAAI/bge-base-en"
-    encode_kwargs = {'normalize_embeddings': True} 
-
-    # Establish embeddings model
-    bge_embeddings = HuggingFaceBgeEmbeddings(
-        model_name=model_name,
-        model_kwargs={'device': 'cpu'},
-        encode_kwargs=encode_kwargs
-    )
-
-    # Create and save the FAISS index
-    if not os.path.exists("faiss_index"):
-        vectordb = FAISS.from_documents(documents=documents, embedding=bge_embeddings, allow_dangerous_deserialization=True)
-        vectordb.save_local("faiss_index")
-    else:
-        vectordb = FAISS.load_local("faiss_index", bge_embeddings, allow_dangerous_deserialization=True)
-
-    retriever = vectordb.as_retriever(search_kwargs={"k": 5})
-
-    # Initialize message history
-    if "messages" not in st.session_state:  
-        st.session_state.messages = [
-            {"role": "assistant", "content": "Merhaba Ben Techie 🤖. Data Science, Mentoring ve IT alanındaki sorularınıza cevap vermeye çalışacağım."}]
-
-    # Prompt function remains the same
-    def prompt_fn(query: str, context: str) -> str:
-        return f"""
-        You are an experienced IT staff having expertise in Data Science, Information Technology, 
-        Programming Languages, Statistics, Data Visualization, Cloud Systems, Deployment, Project Management and its tools, 
-        Communication systems, Web sites for remote working and Mentoring. 
-        If the user's query matches any question from the database, return the corresponding answer directly. 
-        If the query is within the context, generate only one concise and accurate response in Turkish strictly based on the provided context. 
-        If the query is outside the context, respond only with "Kapsam dışı sorduğunuz sorulara cevap veremiyorum."
-
-        Context: {context}
+if api_key:
+    excel_file = st.file_uploader("Excel dosyanızı yükleyin", type=["xlsx"])
+    if excel_file:
+        # Read Excel file into a DataFrame
+        data = pd.read_excel(excel_file)
         
-        User's question: {query}"""
+        # Convert questions and answers to a list
+        questions = data['Questions'].tolist()  
+        answers = data['Answers'].tolist()      
 
-    # LLM model
-    @st.cache_resource
-    def load_llm():
-        return ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0, max_tokens=150)
+        # Create document objects
+        documents = [Document(page_content=f"{row['Questions']}\n{row['Answers']}") for _, row in data.iterrows()]
 
-    llm = load_llm()
+        # Determine embedding model
+        model_name = "BAAI/bge-base-en"
+        encode_kwargs = {'normalize_embeddings': True} 
 
-    @st.cache_resource
-    def create_rag_chain():
-        from langchain_core.runnables import RunnableLambda
-        prompt_runnable = RunnableLambda(lambda inputs: prompt_fn(inputs["query"], inputs["context"]))
-        return prompt_runnable | llm | StrOutputParser()
+        # Establish embeddings model
+        bge_embeddings = HuggingFaceBgeEmbeddings(
+            model_name=model_name,
+            model_kwargs={'device': 'cpu'},
+            encode_kwargs=encode_kwargs
+        )
 
-    rag_chain = create_rag_chain()
+        # Create and save the FAISS index
+        if not os.path.exists("faiss_index"):
+            vectordb = FAISS.from_documents(documents=documents, embedding=bge_embeddings, allow_dangerous_deserialization=True)
+            vectordb.save_local("faiss_index")
+        else:
+            vectordb = FAISS.load_local("faiss_index", bge_embeddings, allow_dangerous_deserialization=True)
 
-    # Typewriter effect remains the same
-    def typewriter_effect(text, delay=0.05):
-        display_text = ""
-        placeholder = st.empty()
-        for char in text:
-            display_text += char
-            placeholder.markdown(f"{display_text}")
-            time.sleep(delay)
+        retriever = vectordb.as_retriever(search_kwargs={"k": 5})
 
-    # Generate response function remains similar but uses FAISS
-    def generate_response(query):
-        # Search the database for the exact answer
-        for _, row in data.iterrows():
-            if query.strip().lower() in row["Questions"].strip().lower():
-                suggestions = "\n".join([f"- {q}" for q in random.sample(questions, k=3)])  
-                return row["Answers"], suggestions  
+        # Initialize message history
+        if "messages" not in st.session_state:  
+            st.session_state.messages = [
+                {"role": "assistant", "content": "Merhaba Ben Techie 🤖. Data Science, Mentoring ve IT alanındaki sorularınıza cevap vermeye çalışacağım."}]
 
-        results = retriever.get_relevant_documents(query)[:3]  
-        context = "\n".join([doc.page_content for doc in results])
-        inputs = {"query": query, "context": context}
-        response = rag_chain.invoke(inputs)
+        # Prompt function remains the same
+        def prompt_fn(query: str, context: str) -> str:
+            return f"""
+            You are an experienced IT staff having expertise in Data Science, Information Technology, 
+            Programming Languages, Statistics, Data Visualization, Cloud Systems, Deployment, Project Management and its tools, 
+            Communication systems, Web sites for remote working and Mentoring. 
+            If the user's query matches any question from the database, return the corresponding answer directly. 
+            If the query is within the context, generate only one concise and accurate response in Turkish strictly based on the provided context. 
+            If the query is outside the context, respond only with "Kapsam dışı sorduğunuz sorulara cevap veremiyorum."
 
-        related_questions = random.sample(questions, k=3)  
-        suggestions = "\n".join([f"- {q}" for q in related_questions])
+            Context: {context}
 
-        return response, suggestions
+            User's question: {query}"""
 
-    # Display chat messages from session state
-    for message in st.session_state["messages"]:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+        # LLM model
+        @st.cache_resource
+        def load_llm():
+            return ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0, max_tokens=150)
 
-    # Handle user query input
-    if query := st.chat_input("Sorunuzu buraya yazabilirsiniz..."):
-        st.session_state["messages"].append({"role": "user", "content": query})
-        with st.chat_message("user"):
-            st.write(query)
+        llm = load_llm()
 
-        # Generate response with typewriter effect
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                response, suggestions = generate_response(query)
-                
-                # Apply the typewriter effect for response and suggestions
-                typewriter_effect(response)  # Simulating typewriter effect for response
-                st.markdown("### Şu soruları sorabilirsiniz: ")
-                typewriter_effect(suggestions)  # Simulating typewriter effect for suggestions
+        @st.cache_resource
+        def create_rag_chain():
+            from langchain_core.runnables import RunnableLambda
+            prompt_runnable = RunnableLambda(lambda inputs: prompt_fn(inputs["query"], inputs["context"]))
+            return prompt_runnable | llm | StrOutputParser()
 
-                # Store assistant's response in session state
-                st.session_state["messages"].append({"role": "assistant", "content": response})
+        rag_chain = create_rag_chain()
+
+        # Typewriter effect remains the same
+        def typewriter_effect(text, delay=0.05):
+            display_text = ""
+            placeholder = st.empty()
+            for char in text:
+                display_text += char
+                placeholder.markdown(f"{display_text}")
+                time.sleep(delay)
+
+        # Generate response function remains similar but uses FAISS
+        def generate_response(query):
+            # Search the database for the exact answer
+            for _, row in data.iterrows():
+                if query.strip().lower() in row["Questions"].strip().lower():
+                    suggestions = "\n".join([f"- {q}" for q in random.sample(questions, k=3)])  
+                    return row["Answers"], suggestions  
+
+            results = retriever.get_relevant_documents(query)[:3]  
+            context = "\n".join([doc.page_content for doc in results])
+            inputs = {"query": query, "context": context}
+            response = rag_chain.invoke(inputs)
+
+            related_questions = random.sample(questions, k=3)  
+            suggestions = "\n".join([f"- {q}" for q in related_questions])
+
+            return response, suggestions
+
+        # Display chat messages from session state
+        for message in st.session_state["messages"]:
+            with st.chat_message(message["role"]):
+                st.write(message["content"])
+
+        # Handle user query input
+        if query := st.chat_input("Sorunuzu buraya yazabilirsiniz..."):
+            st.session_state["messages"].append({"role": "user", "content": query})
+            with st.chat_message("user"):
+                st.write(query)
+
+            # Generate response with typewriter effect
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    response, suggestions = generate_response(query)
+                    
+                    # Apply the typewriter effect for response and suggestions
+                    typewriter_effect(response)
+                    st.write(f"**İlgili sorular:**\n{suggestions}")
+
+            st.session_state["messages"].append({"role": "assistant", "content": response})
 
     # [Robot avatar HTML ve diğer UI elementleri aynı kalıyor...]
     # Add robot avatar to the right of chat input with the name "Techie"
