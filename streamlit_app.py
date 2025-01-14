@@ -72,15 +72,71 @@ with st.sidebar:
     - DIGITAL MARKETING
     """)
 
+# [Robot avatar HTML ve diğer UI elementleri aynı kalıyor...]
+    # Add robot avatar to the right of chat input with the name "Techie"
+    avatar_html = """
+    <style>
+    .robot-avatar {
+        position: fixed;
+        right: 30px;
+        bottom: 50px;
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(45deg, #32CD32, #FFFFFF);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: float 2s ease-in-out infinite;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        font-family: Arial, sans-serif;
+    }
+
+    .robot-avatar img {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+    }
+
+    .robot-name {
+        position: absolute;
+        top: -25px;
+        left: 10px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #32CD32;
+        background-color: white;
+        padding: 2px 10px;
+        border-radius: 50px;    
+        text-align: center;
+    }
+
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(-5px);
+        }
+        50% {
+            transform: translateY(5px);
+        }
+    }
+    </style>
+    <div class="robot-avatar">
+        <div class="robot-name">Techie </div>
+        <img src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" alt="Robot Avatar">
+    </div>
+    """
+    html(avatar_html, height=200)
+
 st.write(
     "Upload a document below and ask a question about it – GPT will answer! "
     "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
 )
 
 # Input: Get OpenAI API key before file upload
-api_key = st.text_input("Lütfen OpenAI API anahtarınızı girin:", type="password")
+api_key = st.text_input("OpenAI API Key", type="password")
 if not api_key:
-    st.warning("Lütfen API anahtarınızı girin.")
+    st.warning("Please add your OpenAI API key to continue.", icon="🗝️")
 
 openai.api_key = api_key
 
@@ -201,58 +257,4 @@ if api_key:
 
             st.session_state["messages"].append({"role": "assistant", "content": response})
 
-    # [Robot avatar HTML ve diğer UI elementleri aynı kalıyor...]
-    # Add robot avatar to the right of chat input with the name "Techie"
-    avatar_html = """
-    <style>
-    .robot-avatar {
-        position: fixed;
-        right: 30px;
-        bottom: 50px;
-        width: 80px;
-        height: 80px;
-        background: linear-gradient(45deg, #32CD32, #FFFFFF);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        animation: float 2s ease-in-out infinite;
-        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
-        text-align: center;
-        font-family: Arial, sans-serif;
-    }
-
-    .robot-avatar img {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-    }
-
-    .robot-name {
-        position: absolute;
-        top: -25px;
-        left: 10px;
-        font-size: 16px;
-        font-weight: bold;
-        color: #32CD32;
-        background-color: white;
-        padding: 2px 10px;
-        border-radius: 50px;    
-        text-align: center;
-    }
-
-    @keyframes float {
-        0%, 100% {
-            transform: translateY(-5px);
-        }
-        50% {
-            transform: translateY(5px);
-        }
-    }
-    </style>
-    <div class="robot-avatar">
-        <div class="robot-name">Techie </div>
-        <img src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" alt="Robot Avatar">
-    </div>
-    """
-    html(avatar_html, height=200)
+    
