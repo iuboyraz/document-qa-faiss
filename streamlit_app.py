@@ -37,7 +37,7 @@ st.markdown("""
 st.markdown("""
     <div style="text-align: center;">
         <a href="https://www.techproeducation.com/" target="_blank">
-            <img src="https://raw.githubusercontent.com/your-username/your-repo/main/techproeducation_cover.jpg" 
+            <img src="https://raw.githubusercontent.com/iuboyraz/document-qa-faiss/main/techproeducation_cover.jpg" 
             alt="Techpro Education Cover" width="100%" style="border-radius: 10px;"/>
         </a>
     </div>
