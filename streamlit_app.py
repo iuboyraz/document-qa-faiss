@@ -73,7 +73,7 @@ with st.sidebar:
     """)
     
 st.write(
-    "Upload a data science mentorship document below and ask a question about it – GPT will answer! "
+    "Upload a data science mentorship excel document having question and answer format below and ask a question about it – GPT will answer! "
     "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
 )
 
